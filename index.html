@@ -286,6 +286,198 @@
   
   
   <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/05/05/加密模式和填充方式/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Yassinia">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Yassnia's Daily">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2018/05/05/加密模式和填充方式/" itemprop="url">
+                  加密算法和分组密码
+                </a>
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+
+            
+            
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+
+              
+                
+              
+
+              <time title="Created: 2018-05-05 11:59:56" itemprop="dateCreated datePublished" datetime="2018-05-05T11:59:56+08:00">2018-05-05</time>
+            
+
+            
+              
+
+              
+                
+                <span class="post-meta-divider">|</span>
+                
+
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">Edited on</span>
+                
+                <time title="Modified: 2018-05-07 11:32:57" itemprop="dateModified" datetime="2018-05-07T11:32:57+08:00">2018-05-07</time>
+              
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/PKI/" itemprop="url" rel="index"><span itemprop="name">PKI</span></a></span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <p>一直没搞懂<em>对称加密算法</em>与<em>分组密码</em>的关系，趁着周六，重新梳理了这两个概念，现用自己的话将两者的关系表述清楚。</p>
+<h4 id="对称加密算法"><a href="#对称加密算法" class="headerlink" title="对称加密算法"></a>对称加密算法</h4><p>对称加密算法是指加密和解密使用<strong>同一个</strong>秘钥，具体定义可以参考之前的文章<a href="http://lgtoday.com/2018/04/23/data-encrypt/" target="_blank" rel="noopener">加密算法</a>。</p>
+<h4 id="分组密码"><a href="#分组密码" class="headerlink" title="分组密码"></a>分组密码</h4><p>分组密码是指将明文消息编码表示后的数字（<strong>明文数字</strong>）序列，划分为n组，然后在秘钥的控制下变换成等长的输出数字（<strong>密文数字</strong>）序列。</p>
+<blockquote>
+<p>注意：分组密码定义的后半句，<strong>在秘钥的控制下变换成等长的输出数字序列</strong>，这种变换所使用的算法，可能就是<strong>对称加密算法</strong>。</p>
+</blockquote>
+<p>此时，算法和分组之间的关系已经明了。一句话概括为，<strong>先分组，再对每组施以算法</strong>。</p>
+<p>在分组加密的基础上，又有了<strong>加密模式</strong>和<strong>填充方式</strong>这两个概念。接下来，我想简单聊聊这两个概念，最后会推荐两篇别人的文章以加深理解。</p>
+<h5 id="加密模式"><a href="#加密模式" class="headerlink" title="加密模式"></a>加密模式</h5><p>记得刚加入芯片管家团队时，对加密模式的作用不太理解。同事解释道，不同的加密模式，使明文被破解的难度不同。例如，CBC比ECB更难被破解，因为在CBC模式下，加密之前，会将明文块与之前的密文块异或，再对异或结果进行加密。</p>
+<p>除了CBC和ECB，还有CFB和OFB模式。<a href="https://blog.csdn.net/includeiostream123/article/details/51066799" target="_blank" rel="noopener">这篇文章</a>，对常见的4种模式作了很好地阐述。</p>
+<h5 id="填充方式"><a href="#填充方式" class="headerlink" title="填充方式"></a>填充方式</h5><p>某些解密模式（即CBC和ECB），当最后一组的长度不足分组的固定大小，就要对最后一组进行填充。有的规则要求全部填充为0，有的要求第一位填1，其他位填0。</p>
+<p>具体可以参考<a href="https://blog.csdn.net/kikajack/article/details/78329567" target="_blank" rel="noopener">这篇文章</a>。</p>
+<h6 id="题外话：为百度正个名。"><a href="#题外话：为百度正个名。" class="headerlink" title="题外话：为百度正个名。"></a>题外话：为百度正个名。</h6><p>看到这个标题，觉得愤怒的可以不看了，反正这篇文章的主题已经完成。之后的这些话纯属一家之言，与他人无关。</p>
+<p>魏则西事件，让大家很气愤。因为百度的搜索排名，一条鲜活的生命就这样悄然而逝。</p>
+<p>搜索排名，谷歌依靠的是热度。而百度是钱，给的钱越多，排名越靠前。魏则西，因为去了百度搜索里排名靠前的医院，错过了最佳的治疗时间。这件事因此成了热点，也让百度承受了巨大压力。</p>
+<p>IT界有言，搜索绝对用谷歌。同一个问题，百度搜索出的文章给的答案相差不大，也许可以这样说，这些文章通常都是抄来抄去。</p>
+<p>百度，为利益驱动，这是无可否认的事实。 但百度词条，我还是极力推崇。</p>
+<p>知识类搜索，百度词条通常比较靠谱。例如<a href="https://baike.baidu.com/item/%E6%95%B0%E6%8D%AE%E5%8A%A0%E5%AF%86/11048982" target="_blank" rel="noopener">数字加密</a>，词条里不仅有简介、基本概念，还对加密解密的具体流程给出了示例，不可谓不是一部严谨的教科书。</p>
+<p>百度词条的顶部通常有这样一句话：</p>
+<blockquote>
+<p>声明：百科词条人人可编辑，词条创建和修改均免费，绝不存在官方及代理商付费代编，请勿上当受骗。</p>
+</blockquote>
+<p>这有点类似国外的wiki，任何人都可以编辑或修正。这增加了百度词条的可信性，也看到了百度的一点儿业界良心。对于英文不好的国人来说，百度词条无疑提供了获取真实信息的便利性，这里可以给百度点个赞了。</p>
+
+          
+        
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
     <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/04/23/data-encrypt/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -701,7 +893,7 @@
                 
                   <a href="/archives/">
                 
-                    <span class="site-state-item-count">2</span>
+                    <span class="site-state-item-count">3</span>
                     <span class="site-state-item-name">posts</span>
                   </a>
                 </div>
