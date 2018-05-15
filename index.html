@@ -286,6 +286,205 @@
   
   
   <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/05/14/Java堆栈及内存分配/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Yassinia">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Yassnia's Daily">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2018/05/14/Java堆栈及内存分配/" itemprop="url">
+                  Java中堆栈及内存分配
+                </a>
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+
+            
+            
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+
+              
+                
+              
+
+              <time title="Created: 2018-05-14 15:06:10" itemprop="dateCreated datePublished" datetime="2018-05-14T15:06:10+08:00">2018-05-14</time>
+            
+
+            
+              
+
+              
+                
+                <span class="post-meta-divider">|</span>
+                
+
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">Edited on</span>
+                
+                <time title="Modified: 2018-05-15 11:28:16" itemprop="dateModified" datetime="2018-05-15T11:28:16+08:00">2018-05-15</time>
+              
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/Java/" itemprop="url" rel="index"><span itemprop="name">Java</span></a></span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <p>写项目时，<em>内存溢出</em>、<em>OutOfMemoryError</em>、<em>StackOverflowError</em> 是很常见的bug。字面意思很明白，比如某个对象存储需要100M，但栈空间只剩下80M，这时程序就会抛出内存溢出之类的异常。解决措施也很多，比如变量使用后将其设为<code>null</code>，或者调用<code>System.gc()</code> 。说实话这些解决方式使用时有些盲目，我觉得理解清楚堆栈以及内存分配是解决这类问题的第一步。</p>
+<p>首先申明这篇文章我不是首创，只是觉得原作者很好地解释了我的疑问。这里我做下记录（原文章是英文，文章最后我会配上链接），希望可以帮助更多人理解它们之间的关系。</p>
+<h3 id="堆-Java-Heap-Space）"><a href="#堆-Java-Heap-Space）" class="headerlink" title="堆(Java Heap Space）"></a>堆(Java Heap Space）</h3><p>Java堆空间由java运行时使用，用来给对象和类分配内存。任何java对象，都是在堆空间里被创建。</p>
+<p>垃圾回收机制在栈中运行，用来释放栈中没被引用的对象所占的内存。在堆空间创建的对象全局可访，并且在应用的任何地方都可被引用。</p>
+<h5 id="栈-Java-Stack-Memory"><a href="#栈-Java-Stack-Memory" class="headerlink" title="栈(Java Stack Memory)"></a>栈(Java Stack Memory)</h5><p>栈用来运行一个线程，栈内会含有一个方法的局部变量和引用变量。栈内存遵循<strong>后进先出（Last-In-First-Out）</strong> 原则，当一个方法被调用，一个新的区块就在栈里创建了，用来存储该方法所使用的局部变量和引用。方法调用结束后，该区块废弃了，并且可被下一个方法使用。</p>
+<p>栈的空间大小远小于堆。</p>
+<h5 id="程序中的堆栈"><a href="#程序中的堆栈" class="headerlink" title="程序中的堆栈"></a>程序中的堆栈</h5><p>下面用一段简单的程序来理解下堆栈内存的使用</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">package com.journaldev.test;</span><br><span class="line"></span><br><span class="line">public class Memory &#123;</span><br><span class="line">  public static void main(String[] args) &#123;  //Line 1</span><br><span class="line">    int i=1;  //Line 2</span><br><span class="line">    Object obj = new Object();  //Line 3</span><br><span class="line">    Memory mem = new Memory();  //Line 4</span><br><span class="line">    mem.foo(obj);  //Line 5</span><br><span class="line">    &#125;  //Line 9</span><br><span class="line"></span><br><span class="line">  private void foo(Object param) &#123; //Line 6</span><br><span class="line">    String str = param.toString(); //Line 7</span><br><span class="line">    System.out.println(str);</span><br><span class="line">  &#125; //Line 8</span><br></pre></td></tr></table></figure>
+<p>下面这张图展示了与上述程序相关的堆栈内存，以及它们是如何存储原始数据类型、对象以及引用变量的。<img src="http://wx4.sinaimg.cn/large/b1c1f4f9ly1frb1147r9gj20og0dt74t.jpg" alt="image"></p>
+<ul>
+<li>一旦程序运行起来，所有运行时的类都被加载进堆空间。执行到<code>main()</code>（Line 1）方法，java 运行时会创建栈内存，供<code>main()</code>方法所在的线程使用。</li>
+<li>Line 2，我们在<code>main()</code>方法的栈内存里生成，并存储了原始数据类型的局部变量。</li>
+<li>Line 3，因为我们创建了对象，所以它被存储在堆空间。与此同时，栈里也包含了该对象的引用。<br>Line 4，我们创建了<code>Memory</code>对象，该对象也是被存储于堆空间，同时栈里也包含该对象的引用。</li>
+<li>在Line 5，我们调用了<code>foo()</code>方法。此时会在栈顶创建一个新的区块，用来被<code>foo()</code>方法所在的线程使用。同时因为传入了<code>Object</code>对象，<code>foo()</code>对应的栈空间会创建<code>Object</code>对象的引用（Line  6）。</li>
+<li>Line 7，字符串被创建，该字符串进入<code>String Pool</code>。同时，<code>foo()</code>对应的栈空间会创建该字符串的引用。</li>
+<li>Line 8，<code>foo()</code>方法执行完毕。此时，栈里分配给该方法所在线程的内存会被释放掉。</li>
+<li>Line 9，<code>main()</code>方法执行完毕，此时它所占有的栈内存被释放。同样地，整个程序也在此行结束，java运行时释放所有占用的内存，并结束程序的运行。</li>
+</ul>
+<h3 id="堆栈间的关系"><a href="#堆栈间的关系" class="headerlink" title="堆栈间的关系"></a>堆栈间的关系</h3><p>基于上述的逐条说明，我们可以得出以下结论：</p>
+<ol>
+<li>堆空间可以被整个应用使用，然而栈内存只能被一个正在执行的线程使用。</li>
+<li>不管什么时候创建对象，它总是被存储在堆空间里，栈只会含有它的引用。栈内存只会含有原始数据类型的局部变量，以及对堆里对象的引用。</li>
+<li>栈里的对象都是全局可访问的，然而对空间不能被其他线程访问。</li>
+<li>栈的内存管理满足<strong>后进先出</strong>院子，而堆空间因为全局可用，管理起来会复杂的多。堆空间可以划分为 Young-Generation，Old-Generation 等等。具体参见垃圾回收机制。</li>
+<li>栈内存生命周期很短，线程执行结束其对应的栈空间也就释放掉了。而堆空间从程序开始运行到结束，会一直存在。</li>
+<li>我们可以使用<code>-Xms</code>和<code>-Xmx</code>这两个jvm选项定义堆内存的区间，使用<code>-Xss</code>定义栈内存。</li>
+<li>栈空间不足，java 运行时会抛出<code>java.lang.StackOverFlowError</code>异常。堆空间不足，则抛出<code>java.lang.OutOfMemoryError: Java Heap Space</code>异常。</li>
+<li>栈内存比堆内存小得多。由于内存分配简单(LIFO)，栈的运行速度比堆更快。</li>
+</ol>
+<h3 id="声明"><a href="#声明" class="headerlink" title="声明"></a>声明</h3><p>这篇文章是翻译过来的，原文在<a href="https://www.journaldev.com/4098/java-heap-space-vs-stack-memory" target="_blank" rel="noopener">Java Heap Space vs Stack– Memory Allocation in Java</a>。</p>
+
+          
+        
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
     <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/05/05/加密模式和填充方式/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -893,7 +1092,7 @@
                 
                   <a href="/archives/">
                 
-                    <span class="site-state-item-count">3</span>
+                    <span class="site-state-item-count">4</span>
                     <span class="site-state-item-name">posts</span>
                   </a>
                 </div>
@@ -908,7 +1107,9 @@
                     
                       
                     
-                    <span class="site-state-item-count">1</span>
+                      
+                    
+                    <span class="site-state-item-count">2</span>
                     <span class="site-state-item-name">categories</span>
                   </a>
                 </div>
