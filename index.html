@@ -286,6 +286,190 @@
   
   
   <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/05/17/Android几个概念/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Yassinia">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Yassnia's Daily">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2018/05/17/Android几个概念/" itemprop="url">
+                  Android几个概念
+                </a>
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+
+            
+            
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+
+              
+                
+              
+
+              <time title="Created: 2018-05-17 19:25:04" itemprop="dateCreated datePublished" datetime="2018-05-17T19:25:04+08:00">2018-05-17</time>
+            
+
+            
+              
+
+              
+                
+                <span class="post-meta-divider">|</span>
+                
+
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">Edited on</span>
+                
+                <time title="Modified: 2018-05-21 11:53:56" itemprop="dateModified" datetime="2018-05-21T11:53:56+08:00">2018-05-21</time>
+              
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <p>最近在看阿里出的《深入探索Android热修复技术原理》，不得不说阿里的技术真是深厚。顺着书里的脉络，捕捉到<em>插桩</em>这个概念。为了弄清楚插桩到底怎样实现，又走到了<em>自定义Gradle插件</em>，接着是<em>怎样将Android library分发到jCenter和Maven Central</em>，有点儿捡了芝麻丢了西瓜的感觉。好在这些功夫也没白费，多多少少弄清了些疑惑好久的概念，这里作下记录。</p>
+<h3 id="Gradle相关"><a href="#Gradle相关" class="headerlink" title="Gradle相关"></a>Gradle相关</h3><h4 id="gradle文件引用的库从何来？"><a href="#gradle文件引用的库从何来？" class="headerlink" title="gradle文件引用的库从何来？"></a>gradle文件引用的库从何来？</h4><p>AndroidStudio开发Android项目，引用第三方库时，通常在当前Module的gradle里添加这样的一句代码：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">dependencies &#123;</span><br><span class="line">    implementation &apos;com.google.code.gson:gson:2.8.4&apos;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>之后同步一下，就可以使用这个库了。同步的过程，as做了什么，又从哪里得到了库？答案其实很简单</p>
+<blockquote>
+<p>AS从根目录gradle文件配置的仓库里获取。</p>
+</blockquote>
+<p>看一下项目的gradle文件中对仓库的配置：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">allprojects &#123;</span><br><span class="line">    repositories &#123;</span><br><span class="line">        google()</span><br><span class="line">        jcenter()</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>可以看出，项目里配置了<code>google()</code>和<code>jcenter()</code>两个仓库。我尝试将<code>google()</code>注释掉，结果编译不通过，出现了下面的错误：</p>
+<p><img src="http://ws1.sinaimg.cn/large/b1c1f4f9ly1frfllle319j21mk0r0agc.jpg" alt="image"></p>
+<p>这说明，这几个依赖存储在google仓库里。可以稍微推测下，以<code>com.android</code>开头的依赖，都存于该库。</p>
+<blockquote>
+<p>jcenter()中央仓库，是通过<code>Maven</code>搭建,但比Maven仓库更友好，通过<code>CDN</code>分发，并且支持<code>https</code><br>访问。当然，也还有其他仓库，比如<code>mavenCentral()</code>、<code>mavenLocal()</code>，或者其他通过<code>url</code>配置的仓库。</p>
+</blockquote>
+<h4 id="为什么引用既有jar包，又有aar？"><a href="#为什么引用既有jar包，又有aar？" class="headerlink" title="为什么引用既有jar包，又有aar？"></a>为什么引用既有jar包，又有aar？</h4><ul>
+<li>jar，全称为<code>Java Archive</code>，即<strong>Java 归档文件</strong>，可以用于发布和使用类库（当然也有其他用途）。</li>
+<li>aar 文件是在jar基础上开发的，它之所以开发出来是因为一些android特有的文件需要被包含进去，比如<code>AndroidManifest.xml</code>、 <code>Resources</code>、<code>Assets</code> 或者 <code>JNI</code>，而这些文件是不包含在jar标准里的。<blockquote>
+<p>简单来说，aar 与 jar都是 zip压缩文件，只是文件结构不同。jar 文件被集成在 aar 里，以 <code>classes.jar</code>命名。</p>
+</blockquote>
+</li>
+</ul>
+<p>将一个arr文件后缀改为.zip，解压后达到下面这些文件<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">- /AndroidManifest.xml (mandatory)</span><br><span class="line">- /classes.jar (mandatory)</span><br><span class="line">- /res/ (mandatory)</span><br><span class="line">- /R.txt (mandatory)</span><br><span class="line">- /assets/ (optional)</span><br><span class="line">- /libs/*.jar (optional)</span><br><span class="line">- /jni/&lt;abi&gt;/*.so (optional)</span><br><span class="line">- /proguard.txt (optional)</span><br><span class="line">- /lint.jar (optional)</span><br></pre></td></tr></table></figure></p>
+<p>由此可以看出，aar专为android而生。</p>
+<p>推荐一篇文章<a href="https://inthecheesefactory.com/blog/how-to-upload-library-to-jcenter-maven-central-as-dependency/en" target="_blank" rel="noopener">怎样向Maven服务器上传依赖</a>，这篇文章对仓库、aar文件，以及如何上传依赖至仓库都作了很清晰的说明。</p>
+<h4 id="Java字节码是什么？"><a href="#Java字节码是什么？" class="headerlink" title="Java字节码是什么？"></a>Java字节码是什么？</h4><p>先用一张图梳理下安卓apk的打包流程：</p>
+<p><img src="http://wx1.sinaimg.cn/large/b1c1f4f9ly1frireo9f1gj20ew0oi0y1.jpg" alt="image"></p>
+<p>具体流程可以参考这篇文章<a href="https://juejin.im/entry/58b78d1b61ff4b006cd47e5b" target="_blank" rel="noopener">Apk打包流程梳理</a>，本文的重点是Java字节码，所以对流程不做具体分析了。</p>
+<p>Java字节码是Java虚拟机执行的一种虚拟指令格式，即上图中经过Java虚拟机编译后（Java Compiler）后生成的<code>.class</code>文件。</p>
+<p>Java字节码结构如下图所示：</p>
+<p><img src="http://wx1.sinaimg.cn/large/b1c1f4f9ly1frit4lbrn2j20j60c6t95.jpg" alt="image"></p>
+<p>包括魔数、版本号、常量池等10个部分。每个字段的含义及相应的解析参考<a href="https://www.jianshu.com/p/252f381a6bc4" target="_blank" rel="noopener">这篇博文</a>。</p>
+<blockquote>
+<p>说明：我看过这篇博文的感受是，我们写的每句代码的每个字符，其实都被Java虚拟机转化为对应的16进制，例如<code>this</code>，经转化后变为 <code>0x7468 6973</code>。每个字符占八位，即<code>t:74</code>，<code>h:68</code>，<code>i:69</code>，<code>s:73</code>。这段说明也许可以帮助理解那篇博文。</p>
+</blockquote>
+
+          
+        
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
     <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/05/14/Java堆栈及内存分配/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -1092,7 +1276,7 @@
                 
                   <a href="/archives/">
                 
-                    <span class="site-state-item-count">4</span>
+                    <span class="site-state-item-count">5</span>
                     <span class="site-state-item-name">posts</span>
                   </a>
                 </div>
