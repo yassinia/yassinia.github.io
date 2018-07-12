@@ -286,6 +286,201 @@
   
   
   <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/06/04/另类进程间通信/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Yassinia">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Yassnia's Daily">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2018/06/04/另类进程间通信/" itemprop="url">
+                  Messenger + ContentProvider 实现进程间通信
+                </a>
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+
+            
+            
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+
+              
+                
+              
+
+              <time title="Created: 2018-06-04 15:42:26" itemprop="dateCreated datePublished" datetime="2018-06-04T15:42:26+08:00">2018-06-04</time>
+            
+
+            
+              
+
+              
+                
+                <span class="post-meta-divider">|</span>
+                
+
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">Edited on</span>
+                
+                <time title="Modified: 2018-07-12 16:52:57" itemprop="dateModified" datetime="2018-07-12T16:52:57+08:00">2018-07-12</time>
+              
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/Android/" itemprop="url" rel="index"><span itemprop="name">Android</span></a></span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <p>首先说先Android里进程间通信的常用几种方式：</p>
+<ol>
+<li>文件共享</li>
+<li><code>Bundle</code>传值</li>
+<li><code>AIDL</code></li>
+<li><code>Socket</code></li>
+</ol>
+<p>这段时间项目里用了新的方式进行进程间通信，即<code>ContentProvider + Messenger</code>。</p>
+<p><code>ContentProvider</code> 主要用来提供多个应用程序间的数据共享，它常用的方法是<code>query</code>、<code>insert</code>、<code>update</code>、<code>delete</code>,很明显，这些是数据库操作的方法–即增删改查。</p>
+<p>除此之外，<code>ContentProvider</code> 还有个不常用的方法<code>call</code>,该方法可以实现进程间的方法调用。</p>
+<p><code>Messenger</code>作用，注释里这样解释<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">Reference to a Handler, which others can use to send messages to it.This allows for the implementation of message-based communication across</span><br><span class="line">processes, by creating a Messenger pointing to a Handler in one process,</span><br><span class="line">and handing that Messenger to another process.</span><br></pre></td></tr></table></figure></p>
+<p>也就是说<code>Messenger</code>支持基于<code>Message</code>的进程间通信，并且参数<code>Handler</code>接收别的进程发过来的消息。</p>
+<p>注释里还有这样一句<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Note: the implementation underneath is just a simple wrapper around a &#123;@link Binder&#125; that is used to perform the communication.</span><br></pre></td></tr></table></figure></p>
+<p>是说<code>Messenger</code>的本质是对<code>Binder</code>的封装，用<code>Binder</code>来执行进程间通信。</p>
+<p>现在说下怎样将<code>Messenger</code>怎样与<code>ContentProvider</code>结合起来，实现进程间通信。</p>
+<p>第一步，创建<code>ContentProvider</code>，并声明。<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line">package com.example.yaxin.hookdemo;</span><br><span class="line"></span><br><span class="line">public class MyProvider extends ContentProvider&#123;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">  ...  &lt;!-- 省略了 onCreat() 和 增删改查几个方法--&gt;</span><br><span class="line"></span><br><span class="line">  @Nullable</span><br><span class="line">    @Override</span><br><span class="line">    public Bundle call(@NonNull String method, @Nullable String arg, @Nullable Bundle extras) &#123;</span><br><span class="line"></span><br><span class="line">      IBinder iBinder = extras.getBinder(&quot;IBinder&quot;);</span><br><span class="line">      Messenger messenger = new Messenger(iBinder);</span><br><span class="line">      Message msg = Message.obtain();</span><br><span class="line">      msg.what =2;</span><br><span class="line">      try &#123;</span><br><span class="line">          messenger.send(msg);</span><br><span class="line">      &#125; catch (RemoteException e) &#123;</span><br><span class="line">          e.printStackTrace();</span><br><span class="line">      &#125;</span><br><span class="line">      return super.call(method, arg, extras);</span><br><span class="line"></span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>在<code>AndroidManifest.xml</code>添加<code>ContentProvider</code>的声明，注意使用<code>android:process=&quot;:process&quot;</code>将其设为独立进程，以供主进程执行进程间通信。<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">&lt;application&gt;</span><br><span class="line">&lt;provider</span><br><span class="line">   android:process=&quot;:process&quot;</span><br><span class="line">   android:authorities=&quot;com.yx.provider&quot;</span><br><span class="line">   android:name=&quot;com.example.yaxin.hookdemo.MyProvider&quot;</span><br><span class="line">   android:exported=&quot;true&quot;/&gt;</span><br><span class="line">&lt;/application&gt;</span><br></pre></td></tr></table></figure></p>
+<blockquote>
+<p>注意：<code>provider</code>里的这个属性<code>android:exported</code>,表示<strong>是否支持其他应用调用当前组件</strong>，是Android四大组件都有的属性。<code>provider</code>里该属性默认为<code>false</code>,我们设为<code>true</code>,否则其它进程调不到。</p>
+</blockquote>
+<p>第二步，创建调用类<code>ResolverHelper</code>，实现调用<code>ContentProvider</code>中方法的功能。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">package com.example.yaxin.hookdemo;</span><br><span class="line">public class ResolverHelper &#123;</span><br><span class="line"></span><br><span class="line">    private static ResolverHelper helper = new ResolverHelper();</span><br><span class="line"></span><br><span class="line">    public static ResolverHelper getHelper()&#123;</span><br><span class="line">        return helper;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    public void sendMsg(Context context, IBinder iBinder)&#123;</span><br><span class="line">        if (context==null)&#123;</span><br><span class="line">            throw  new NullPointerException(&quot;context is null&quot;);</span><br><span class="line">        &#125;</span><br><span class="line">        ContentResolver contentResolver = context.getContentResolver();</span><br><span class="line">        Uri uri = Uri.parse(&quot;content://com.yx.provider&quot;);</span><br><span class="line">        Bundle extras = new Bundle();</span><br><span class="line">        extras.putBinder(&quot;IBinder&quot;,iBinder);</span><br><span class="line">        Bundle bundle = contentResolver.call(uri,&quot;abc&quot;,null,extras);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>第三步，在主界面了生成<code>Messenger</code>对象，然后通过<code>ResolverHelper</code>调用<code>MyProvider</code>。<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line">package com.example.yaxin.hookdemo;</span><br><span class="line"></span><br><span class="line">public class MainActivity extends AppCompatActivity &#123;</span><br><span class="line"></span><br><span class="line">    @Override</span><br><span class="line">    protected void onCreate(Bundle savedInstanceState) &#123;</span><br><span class="line">        super.onCreate(savedInstanceState);</span><br><span class="line">        setContentView(R.layout.activity_main);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    private Handler handler = new Handler()&#123;</span><br><span class="line">        @Override</span><br><span class="line">        public void handleMessage(Message msg) &#123;</span><br><span class="line">            super.handleMessage(msg);</span><br><span class="line">            Toast.makeText(MainActivity.this,msg.what+&quot;&quot;,Toast.LENGTH_LONG).show();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    private void send()&#123;</span><br><span class="line">        Messenger messenger = new Messenger(handler);</span><br><span class="line">        ResolverHelper.getHelper().sendMsg(this,messenger.getBinder());</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    public void sendMsg(View view)&#123;</span><br><span class="line">        send();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p><code>MainActivity</code>的布局很简单，不外贴了。这样就实现了这种不常用的进程间通信方式。</p>
+<p>写到这里，突然不知道怎么继续下去。也许就是这样，原理不明白前，总觉得可以长篇大论。但真的搞明白了，就开始感觉不过如此。</p>
+<p>写一篇准备深入分析<code>Messenger</code>源码，再之后是<code>Handler</code>，敬请期待。</p>
+
+          
+        
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
     <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/05/17/Android几个概念/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -349,7 +544,7 @@
                 
                   <span class="post-meta-item-text">Edited on</span>
                 
-                <time title="Modified: 2018-05-21 11:59:33" itemprop="dateModified" datetime="2018-05-21T11:59:33+08:00">2018-05-21</time>
+                <time title="Modified: 2018-06-04 15:43:09" itemprop="dateModified" datetime="2018-06-04T15:43:09+08:00">2018-06-04</time>
               
             
           </span>
@@ -403,7 +598,7 @@
         
           
             <p>最近在看阿里出的《深入探索Android热修复技术原理》，不得不说阿里的技术真是深厚。顺着书里的脉络，捕捉到<em>插桩</em>这个概念。为了弄清楚插桩到底怎样实现，又走到了<em>自定义Gradle插件</em>，接着是<em>怎样将Android library分发到jCenter和Maven Central</em>，有点儿捡了芝麻丢了西瓜的感觉。好在这些功夫也没白费，多多少少弄清了些疑惑好久的概念，这里作下记录。</p>
-<h3 id="Gradle相关"><a href="#Gradle相关" class="headerlink" title="Gradle相关"></a>Gradle相关</h3><h4 id="gradle文件引用的库从何来？"><a href="#gradle文件引用的库从何来？" class="headerlink" title="gradle文件引用的库从何来？"></a>gradle文件引用的库从何来？</h4><p>AndroidStudio开发Android项目，引用第三方库时，通常在当前Module的gradle里添加这样的一句代码：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">dependencies &#123;</span><br><span class="line">    implementation &apos;com.google.code.gson:gson:2.8.4&apos;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<h4 id="gradle文件引用的库从何来？"><a href="#gradle文件引用的库从何来？" class="headerlink" title="gradle文件引用的库从何来？"></a>gradle文件引用的库从何来？</h4><p>AndroidStudio开发Android项目，引用第三方库时，通常在当前Module的gradle里添加这样的一句代码：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">dependencies &#123;</span><br><span class="line">    implementation &apos;com.google.code.gson:gson:2.8.4&apos;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
 <p>之后同步一下，就可以使用这个库了。同步的过程，as做了什么，又从哪里得到了库？答案其实很简单</p>
 <blockquote>
 <p>AS从根目录gradle文件配置的仓库里获取。</p>
@@ -1294,7 +1489,7 @@
                 
                   <a href="/archives/">
                 
-                    <span class="site-state-item-count">5</span>
+                    <span class="site-state-item-count">6</span>
                     <span class="site-state-item-name">posts</span>
                   </a>
                 </div>
